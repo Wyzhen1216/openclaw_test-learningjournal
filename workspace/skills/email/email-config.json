@@ -1,0 +1,15 @@
+{
+  "smtp": {
+    "host": "smtp.zoho.com.cn",
+    "port": 587,
+    "user": "srias_email@zohomail.cn",
+    "pass": "tongjiedu520"
+  },
+  "imap": {
+    "host": "imap.zoho.com.cn",
+    "port": 993,
+    "user": "srias_email@zohomail.cn",
+    "pass": "tongjiedu520"
+  },
+  "from": "srias_email@zohomail.cn"
+}

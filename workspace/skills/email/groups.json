@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "groups": [
+    {
+      "id": "group_1773904693450_eapmer",
+      "name": "邮件测试",
+      "members": [
+        {
+          "name": "",
+          "email": "3315850933@qq.com"
+        },
+        {
+          "name": "",
+          "email": "13696855858@163.com"
+        }
+      ],
+      "createdAt": "2026-03-19T07:18:13.449Z",
+      "updatedAt": "2026-03-19T07:18:13.449Z"
+    }
+  ]
+}

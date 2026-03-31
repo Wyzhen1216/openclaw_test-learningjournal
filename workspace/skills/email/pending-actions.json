@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "activeActionId": null,
+  "pendingActions": [
+    {
+      "id": "pending_1773904776328_hwwnbl",
+      "type": "send_email",
+      "status": "sent",
+      "createdAt": "2026-03-19T07:19:36.327Z",
+      "updatedAt": "2026-03-19T07:19:59.626Z",
+      "expiresAt": "2026-03-20T07:19:36.328Z",
+      "recipients": [
+        {
+          "name": "",
+          "email": "3315850933@qq.com"
+        },
+        {
+          "name": "",
+          "email": "13696855858@163.com"
+        }
+      ],
+      "delivery": {
+        "mode": "group",
+        "groupName": "邮件测试"
+      },
+      "subject": "OpenClaw邮件测试",
+      "body": "这是一封来自OpenClaw的测试邮件，用于验证邮件发送功能是否正常。请勿回复。",
+      "source": {
+        "kind": "direct"
+      },
+      "sendResult": {
+        "method": "smtp",
+        "messageId": "<df682770-8bf3-e82b-f873-e2c4374f68e8@zohomail.cn>"
+      },
+      "sentAt": "2026-03-19T07:19:59.626Z"
+    },
+    {
+      "id": "pending_1773904881444_3t6r1i",
+      "type": "send_email",
+      "status": "sent",
+      "createdAt": "2026-03-19T07:21:21.443Z",
+      "updatedAt": "2026-03-19T07:21:34.448Z",
+      "expiresAt": "2026-03-20T07:21:21.444Z",
+      "recipients": [
+        {
+          "name": "",
+          "email": "3315850933@qq.com"
+        },
+        {
+          "name": "",
+          "email": "13696855858@163.com"
+        }
+      ],
+      "delivery": {
+        "mode": "group",
+        "groupName": "邮件测试"
+      },
+      "subject": "OpenClaw邮件测试",
+      "body": "这是一封来自OpenClaw的测试邮件，用于验证邮件发送功能是否正常。\n请勿回复。",
+      "source": {
+        "kind": "direct"
+      },
+      "sendResult": {
+        "method": "smtp",
+        "messageId": "<c039cd92-2eeb-ab21-39f3-a029a3ca0bf1@zohomail.cn>"
+      },
+      "sentAt": "2026-03-19T07:21:34.448Z"
+    }
+  ]
+}
