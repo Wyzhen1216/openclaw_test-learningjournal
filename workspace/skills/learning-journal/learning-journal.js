@@ -276,13 +276,13 @@ async function discardSummaryDraft() {
 
 // 定时任务配置
 // 1. 每日 09:00 发送今日学习计划
-cron.schedule('*/3 * * * *', sendTodayLearningPlan);
+cron.schedule('0 9 * * *', sendTodayLearningPlan);
 
 // 2. 每日 20:00 发送学习提醒
-cron.schedule('*/3 * * * *', sendDailyLearningPrompt);
+cron.schedule('0 20 * * *', sendDailyLearningPrompt);
 
 // 3. 每周日 19:00 直接生成并发送周总结（正式文件）
-cron.schedule('*/3 * * * 2', async () => {
+cron.schedule('0 19 * * 0', async () => {
   try {
     const result = await generateAndSendFinalSummary('weekly');
     console.log(`✅ ${result}`);
@@ -292,7 +292,7 @@ cron.schedule('*/3 * * * 2', async () => {
 });
 
 // 4. 每月最后一天 20:00 直接生成并发送月总结（正式文件）
-cron.schedule('*/2 * 28-31 * *', async () => {
+cron.schedule('0 20 28-31 * *', async () => {
   if (moment().date() === moment().daysInMonth()) {
     try {
       const result = await generateAndSendFinalSummary('monthly');

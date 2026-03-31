@@ -27,5 +27,4 @@
 - [2026-03-31] ## 明日 Top 3
 
 ## 生成说明
-- 当前为规则化自动汇总（AI 调用失败已降级）。
-- 失败原因：OPENCLAW_SUMMARY_MODEL 未配置; OPENCLAW_SUMMARY_COMMAND 未配置
+- 当前为规则化自动汇总。
