@@ -15,7 +15,8 @@ async function loadState() {
       streak: 0,          // 连续打卡天数
       lastRecordDate: '', // 最后一次记录日期
       totalDays: 0,       // 累计记录天数
-      draft: null         // 待确认的日志草稿
+      draft: null,        // 待确认的日志草稿
+      summaryDraft: null  // 待确认的周/月总结草稿
     };
   }
 
@@ -94,6 +95,44 @@ async function clearDraft() {
   await saveState(state);
 }
 
+/**
+ * 保存周/月总结草稿，等待用户确认
+ * @param {object} draft - 草稿对象
+ */
+async function setSummaryDraft(draft) {
+  const state = await loadState();
+  state.summaryDraft = {
+    periodType: draft.periodType,
+    periodKey: draft.periodKey,
+    periodTitle: draft.periodTitle,
+    periodRangeText: draft.periodRangeText,
+    sourceDates: draft.sourceDates || [],
+    content: draft.content || '',
+    usedAI: !!draft.usedAI,
+    provider: draft.provider || 'unknown',
+    updatedAt: moment().format('YYYY-MM-DD HH:mm:ss')
+  };
+  await saveState(state);
+}
+
+/**
+ * 获取当前周/月总结草稿
+ * @returns {object|null}
+ */
+async function getSummaryDraft() {
+  const state = await loadState();
+  return state.summaryDraft || null;
+}
+
+/**
+ * 清空当前周/月总结草稿
+ */
+async function clearSummaryDraft() {
+  const state = await loadState();
+  state.summaryDraft = null;
+  await saveState(state);
+}
+
 // 导出状态管理函数
 module.exports = {
   loadState,
@@ -101,5 +140,8 @@ module.exports = {
   updateStreak,
   setDraft,
   getDraft,
-  clearDraft
+  clearDraft,
+  setSummaryDraft,
+  getSummaryDraft,
+  clearSummaryDraft
 };

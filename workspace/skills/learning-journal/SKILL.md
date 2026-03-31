@@ -17,13 +17,18 @@
 - FROM_EMAIL: 邮件显示的发件邮箱（默认等于 EMAIL_USER）
 - FROM_NAME: 邮件显示的发件人名称（默认“学习日志助手”）
 - JOURNAL_PATH: 日志保存根目录（不填时默认 `workspace/memory/learning-journal`）
+- OPENCLAW_SUMMARY_MODEL: 周/月总结生成使用的模型名（如已在网关配置的模型 ID）
+- OPENCLAW_SUMMARY_ENDPOINT: 可选，模型网关地址（默认 `http://127.0.0.1:18789/v1/chat/completions`）
+- OPENCLAW_GATEWAY_TOKEN: 可选，网关鉴权 token
+- OPENCLAW_SUMMARY_COMMAND: 可选，CLI 调用命令（当网关不可用时备用）
 
 ## 功能说明
 1. 每日 09:00 自动发送今日学习计划邮件（基于近几天日志）
 2. 每日 20:00 自动发送学习提醒邮件
 3. 支持“草稿-编辑-确认”两阶段日志保存流程
-4. 每周日 19:00 发送周学习总结
-5. 每月最后一天 20:00 发送月学习总结
+4. 每周日 19:00 自动生成周总结草稿并发提醒邮件（不直接覆盖正式总结）
+5. 每月最后一天 20:00 自动生成月总结草稿并发提醒邮件（不直接覆盖正式总结）
+6. 周/月总结支持标签、关键词、关键句自动提取，优先 AI 生成，失败自动降级为规则汇总
 
 ## 交互保存流程（推荐）
 
@@ -33,6 +38,30 @@
 4. 用户明确同意后调用 `confirmAndSaveLearningJournal()` 才会落盘并发送邮件
 5. 放弃时调用 `discardLearningJournalDraft()`
 
+## 周/月总结草稿流程（推荐）
+
+1. 调用 `createWeeklySummaryDraft()` 或 `createMonthlySummaryDraft()` 生成草稿
+2. 调用 `previewSummaryDraft()` 预览
+3. 按需调用 `editSummaryDraft(content)` 修改
+4. 用户明确同意后调用 `confirmAndSaveSummaryDraft()` 才会写入正式总结并发送邮件
+5. 放弃时调用 `discardSummaryDraft()`
+
+## 自动提取与生成原理
+
+1. 从 `daily/*.md` 中提取标签（如 `#问题`）、关键词频次、关键句（困难/收获/计划）
+2. 聚合为周/月结构化统计，再构造提示词给大模型生成总结
+3. 若模型不可用，自动降级为规则化总结模板，保证可用性
+4. 始终先生成草稿，用户确认前不会覆盖正式总结文件
+
 ## 日志存储路径
 默认：`workspace/memory/learning-journal/daily/YYYY-MM-DD.md`  
 可通过 `JOURNAL_PATH` 自定义为任意可写目录
+
+## 总结存储路径
+
+- 草稿：`workspace/memory/learning-journal/summaries/draft/`
+  - 周草稿：`weekly-YYYY-[W]WW.draft.md`
+  - 月草稿：`monthly-YYYY-MM.draft.md`
+- 正式：`workspace/memory/learning-journal/summaries/final/`
+  - 周总结：`weekly-YYYY-[W]WW.md`
+  - 月总结：`monthly-YYYY-MM.md`

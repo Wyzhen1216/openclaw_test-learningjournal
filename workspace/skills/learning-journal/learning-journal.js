@@ -10,9 +10,17 @@ const {
   saveJournal,
   generateWeeklySummary,
   generateMonthlySummary,
-  generateTodayPlanFromRecentLogs
+  generateTodayPlanFromRecentLogs,
+  generatePeriodSummaryDraft
 } = require('./utils');
-const { setDraft, getDraft, clearDraft } = require('./state-store');
+const {
+  setDraft,
+  getDraft,
+  clearDraft,
+  setSummaryDraft,
+  getSummaryDraft,
+  clearSummaryDraft
+} = require('./state-store');
 
 // 从 OpenClaw 环境变量读取 QQ 邮箱配置
 const EMAIL_USER = process.env.EMAIL_USER;      // 你的 QQ 邮箱
@@ -66,6 +74,26 @@ function sendDailyLearningPrompt() {
 async function sendTodayLearningPlan() {
   const planContent = await generateTodayPlanFromRecentLogs(JOURNAL_PATH, 7);
   sendEmail('🎯 今日学习计划', planContent);
+}
+
+function getSummaryPaths(periodType, periodKey) {
+  const prefix = periodType === 'weekly' ? 'weekly' : 'monthly';
+  return {
+    draftPath: `${JOURNAL_PATH}/summaries/draft/${prefix}-${periodKey}.draft.md`,
+    finalPath: `${JOURNAL_PATH}/summaries/final/${prefix}-${periodKey}.md`
+  };
+}
+
+// 直接生成周/月总结：保存正式文件并发送邮件（不走草稿）
+async function generateAndSendFinalSummary(periodType) {
+  const draft = await generatePeriodSummaryDraft(JOURNAL_PATH, periodType);
+  const { finalPath } = getSummaryPaths(periodType, draft.periodKey);
+  await fs.ensureDir(`${JOURNAL_PATH}/summaries/final/`);
+  await saveJournal(finalPath, draft.content);
+
+  const subject = periodType === 'weekly' ? '📊 本周学习总结' : '📅 本月学习总结';
+  await sendEmail(subject, `${draft.content}\n\n已保存到：${finalPath}`);
+  return `${periodType === 'weekly' ? '周' : '月'}总结已生成并发送：${finalPath}`;
 }
 
 // 保存学习日志到文件（暴露给 OpenClaw 调用）
@@ -156,30 +184,136 @@ async function discardLearningJournalDraft() {
   return '已取消并清空当前草稿。';
 }
 
+// 交互式流程：生成周总结草稿（先不落正式文件）
+async function createWeeklySummaryDraft() {
+  try {
+    const draft = await generatePeriodSummaryDraft(JOURNAL_PATH, 'weekly');
+    const { draftPath } = getSummaryPaths('weekly', draft.periodKey);
+    await fs.ensureDir(`${JOURNAL_PATH}/summaries/draft/`);
+    await saveJournal(draftPath, draft.content);
+    await setSummaryDraft(draft);
+    return `周总结草稿已生成：${draftPath}\n\n${draft.content}\n\n可调用 previewSummaryDraft() 预览，确认后调用 confirmAndSaveSummaryDraft()。`;
+  } catch (error) {
+    console.error(`❌ 生成周总结草稿失败：${error.message}`);
+    return `生成周总结草稿失败：${error.message}`;
+  }
+}
+
+// 交互式流程：生成月总结草稿（先不落正式文件）
+async function createMonthlySummaryDraft() {
+  try {
+    const draft = await generatePeriodSummaryDraft(JOURNAL_PATH, 'monthly');
+    const { draftPath } = getSummaryPaths('monthly', draft.periodKey);
+    await fs.ensureDir(`${JOURNAL_PATH}/summaries/draft/`);
+    await saveJournal(draftPath, draft.content);
+    await setSummaryDraft(draft);
+    return `月总结草稿已生成：${draftPath}\n\n${draft.content}\n\n可调用 previewSummaryDraft() 预览，确认后调用 confirmAndSaveSummaryDraft()。`;
+  } catch (error) {
+    console.error(`❌ 生成月总结草稿失败：${error.message}`);
+    return `生成月总结草稿失败：${error.message}`;
+  }
+}
+
+// 交互式流程：查看当前总结草稿
+async function previewSummaryDraft() {
+  const draft = await getSummaryDraft();
+  if (!draft) {
+    return '当前没有待确认的周/月总结草稿。';
+  }
+  return `当前总结草稿（${draft.periodType}-${draft.periodKey}，更新时间：${draft.updatedAt}）：\n\n${draft.content}`;
+}
+
+// 交互式流程：编辑当前总结草稿
+async function editSummaryDraft(content) {
+  const draft = await getSummaryDraft();
+  if (!draft) {
+    return '当前没有可编辑的周/月总结草稿，请先创建草稿。';
+  }
+  if (!content || !content.trim()) {
+    return '新草稿内容为空，请提供修改后的总结内容。';
+  }
+  await setSummaryDraft({
+    ...draft,
+    content: content.trim()
+  });
+  return '总结草稿已更新。确认后请调用 confirmAndSaveSummaryDraft()。';
+}
+
+// 交互式流程：确认保存当前总结草稿
+async function confirmAndSaveSummaryDraft() {
+  try {
+    const draft = await getSummaryDraft();
+    if (!draft || !draft.content) {
+      return '当前没有待确认的周/月总结草稿。';
+    }
+    const { draftPath, finalPath } = getSummaryPaths(draft.periodType, draft.periodKey);
+    await fs.ensureDir(`${JOURNAL_PATH}/summaries/draft/`);
+    await fs.ensureDir(`${JOURNAL_PATH}/summaries/final/`);
+    await saveJournal(draftPath, draft.content);
+    await saveJournal(finalPath, draft.content);
+
+    await sendEmail(
+      `✅ ${draft.periodType === 'weekly' ? '周' : '月'}总结已确认保存`,
+      `已确认保存总结：\n${finalPath}\n\n来源日期：${(draft.sourceDates || []).join(', ') || '无'}\n生成方式：${draft.usedAI ? `AI(${draft.provider})` : '规则降级'}`
+    );
+    await clearSummaryDraft();
+    return `总结已确认保存并发送邮件：${finalPath}`;
+  } catch (error) {
+    console.error(`❌ 确认保存总结失败：${error.message}`);
+    return `确认保存总结失败：${error.message}`;
+  }
+}
+
+// 交互式流程：放弃当前总结草稿
+async function discardSummaryDraft() {
+  const draft = await getSummaryDraft();
+  if (!draft) {
+    return '当前没有待丢弃的周/月总结草稿。';
+  }
+  await clearSummaryDraft();
+  return '已取消并清空当前周/月总结草稿。';
+}
+
 // 定时任务配置
 // 1. 每日 09:00 发送今日学习计划
-cron.schedule('0 9 * * *', sendTodayLearningPlan);
+cron.schedule('*/3 * * * *', sendTodayLearningPlan);
 
 // 2. 每日 20:00 发送学习提醒
-cron.schedule('0 20 * * *', sendDailyLearningPrompt);
+cron.schedule('*/3 * * * *', sendDailyLearningPrompt);
 
-// 3. 每周日 19:00 发送周总结
-cron.schedule('0 19 * * 0', async () => {
-  const weeklySummary = await generateWeeklySummary(JOURNAL_PATH);
-  sendEmail('📊 本周学习总结', weeklySummary);
+// 3. 每周日 19:00 直接生成并发送周总结（正式文件）
+cron.schedule('*/3 * * * 2', async () => {
+  try {
+    const result = await generateAndSendFinalSummary('weekly');
+    console.log(`✅ ${result}`);
+  } catch (error) {
+    console.error(`❌ 周总结自动发送失败：${error.message}`);
+  }
 });
 
-// 4. 每月最后一天 20:00 发送月总结
-cron.schedule('0 20 28-31 * *', async () => {
+// 4. 每月最后一天 20:00 直接生成并发送月总结（正式文件）
+cron.schedule('*/2 * 28-31 * *', async () => {
   if (moment().date() === moment().daysInMonth()) {
-    const monthlySummary = await generateMonthlySummary(JOURNAL_PATH);
-    sendEmail('📅 本月学习反思', monthlySummary);
+    try {
+      const result = await generateAndSendFinalSummary('monthly');
+      console.log(`✅ ${result}`);
+    } catch (error) {
+      console.error(`❌ 月总结自动发送失败：${error.message}`);
+    }
   }
 });
 
 // 暴露函数给 OpenClaw 调用
 module.exports = {
   saveLearningJournal,
+  createWeeklySummaryDraft,
+  createMonthlySummaryDraft,
+  previewSummaryDraft,
+  editSummaryDraft,
+  confirmAndSaveSummaryDraft,
+  discardSummaryDraft,
+  generateWeeklySummary,
+  generateMonthlySummary,
   createLearningJournalDraft,
   editLearningJournalDraft,
   previewLearningJournalDraft,
