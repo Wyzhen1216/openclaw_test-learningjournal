@@ -21,6 +21,8 @@
     "pm2:restart": "pm2 restart learning-journal",
     "pm2:logs": "pm2 logs learning-journal",
     "pm2:status": "pm2 status",
-    "pm2:delete": "pm2 delete learning-journal"
+    "pm2:delete": "pm2 delete learning-journal",
+    "test:summary-gateway": "node test-summary-gateway.js",
+    "preview:summary": "node preview-period-summary.js"
   }
 }

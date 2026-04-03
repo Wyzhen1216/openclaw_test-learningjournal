@@ -97,7 +97,13 @@ async function generateAndSendFinalSummary(periodType) {
   await saveJournal(finalPath, draft.content);
 
   const subject = periodType === 'weekly' ? '📊 本周学习总结' : '📅 本月学习总结';
-  await sendEmail(subject, `${draft.content}\n\n已保存到：${finalPath}`);
+  const genLabel = draft.usedAI
+    ? `AI 生成（${draft.provider}）`
+    : '规则汇总（降级）';
+  await sendEmail(
+    subject,
+    `${draft.content}\n\n已保存到：${finalPath}\n\n——\n生成方式：${genLabel}`
+  );
   return `${periodType === 'weekly' ? '周' : '月'}总结已生成并发送：${finalPath}`;
 }
 
@@ -281,13 +287,13 @@ async function discardSummaryDraft() {
 
 // 定时任务配置
 // 1. 每日 09:00 发送今日学习计划
-cron.schedule('0 9 * * *', sendTodayLearningPlan);
+cron.schedule('0 15 * * *', sendTodayLearningPlan);
 
 // 2. 每日 20:00 发送学习提醒
-cron.schedule('0 20 * * *', sendDailyLearningPrompt);
+cron.schedule('0 15 * * *', sendDailyLearningPrompt);
 
 // 3. 每周日 19:00 直接生成并发送周总结（正式文件）
-cron.schedule('0 19 * * 0', async () => {
+cron.schedule('0 15 * * 5', async () => {
   try {
     const result = await generateAndSendFinalSummary('weekly');
     console.log(`✅ ${result}`);

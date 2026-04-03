@@ -122,27 +122,45 @@ function aggregatePeriodSignals(entries) {
 }
 
 function buildSummaryPrompt(period, stats, periodRangeText) {
+  const periodLabel = period === 'weekly' ? '周总结' : '月总结';
   return [
     '你是学习复盘助手。请严格基于给定统计与摘录写总结，不要编造未出现的事实。',
-    `总结类型：${period === 'weekly' ? '周总结' : '月总结'}`,
+    `总结类型：${periodLabel}`,
     `时间范围：${periodRangeText}`,
     `覆盖日志日期：${stats.sourceDates.join(', ') || '无'}`,
     '',
-    '输入数据(JSON)：',
+    '【输入数据(JSON)】',
     JSON.stringify(stats, null, 2),
     '',
-    '请输出中文 markdown，分为 5 个部分：',
-    '1) 本期概览（3-5条）',
-    '2) 核心收获（引用关键证据）',
-    '3) 主要问题与根因（问题 -> 可能原因 -> 对策）',
-    '4) 下期可执行计划（3-5条，每条可执行且可验证）',
-    '5) 关键词与标签观察（Top 关键词/标签及解释）',
+    '【输出目标】',
+    `请用中文 markdown 写一份${periodLabel}，严格分为三大部分，顺序固定：`,
+    '1. 「这一段时间我实际做了什么」—— 3~6 条可验证的具体事件；',
+    '2. 「从这些事情里的收获与感悟」—— 3~5 条反思，每条都指向上面某一件事；',
+    '3. 「接下来要做的具体计划」—— 3~5 条可执行的行动计划。',
     '',
-    '要求：',
-    '- 语气简洁，少空话。',
-    '- 每个判断尽量引用输入中的日期或原句片段。',
-    '- 不要输出 JSON。'
-  ].join('\n');
+    '【第一部分：这一段时间我实际做了什么】',
+    '- 用小标题「这一段时间我实际做了什么」。',
+    '- 输出 3~6 条 bullet，每条前面必须带日期标签，例如 `[2026-03-31]`，日期必须来自输入数据中的 `sourceDates`。',
+    '- 每条描述一件具体的、可验证的事情（如完成的任务、调通的功能、关键尝试），不要写成「持续学习」「坚持记录」这种抽象口号。',
+    '',
+    '【第二部分：从这些事情里的收获与感悟】',
+    '- 用小标题「从这些事情里的收获与感悟」。',
+    '- 输出 3~5 条 bullet，每条都要明确说明「来自哪一天/哪件事」，可以用 `[来源：YYYY-MM-DD 某事件] —— 结论` 形式。',
+    '- 内容侧重方法、认知、节奏、情绪等层面的变化，不要重复叙述事实本身。',
+    '- 尽量避免空洞句式，如「让我意识到」「让我明白」后面仍要给出具体、可操作的认识。',
+    '',
+    '【第三部分：接下来要做的具体计划】',
+    '- 用小标题「接下来要做的具体计划」。',
+    '- 输出 3~5 条 bullet，每条写清楚：要做的动作 + 频率/时长 + 完成标准，例如「下周至少 2 次，每次 1 小时的……，完成标准是……」。',
+    '- 至少有 1 条是「延续一个已经在做且值得保留的习惯」，至少有 1 条是「针对上面暴露的问题给出的具体改进方案」。',
+    '- 禁止只写「继续保持」「持续优化」「不断精进」这类没有动作细节的口号。',
+    '',
+    '【写作风格要求】',
+    '- 语气自然、偏口语、简洁，像给自己写复盘，不要像给别人写汇报。',
+    '- 每条 bullet 控制在 1~2 句内，避免长段落堆砌形容词。',
+    '- 尽量引用输入 JSON 中的日期、关键词或关键句，不要编造未出现的事实。',
+    '- 不要输出任何 JSON 或代码块，只输出 markdown 标题与正文。',
+  ].join('\\n');
 }
 
 async function tryGenerateByGateway(prompt) {
@@ -169,13 +187,31 @@ async function tryGenerateByGateway(prompt) {
       temperature: 0.2
     })
   });
-  if (!resp.ok) {
-    throw new Error(`gateway 调用失败: ${resp.status}`);
+  const raw = await resp.text();
+  let data;
+  try {
+    data = raw ? JSON.parse(raw) : {};
+  } catch {
+    throw new Error(
+      `gateway 返回非 JSON（HTTP ${resp.status}）：${raw.slice(0, 240)}`
+    );
   }
-  const data = await resp.json();
-  const text = data?.choices?.[0]?.message?.content?.trim();
+  if (!resp.ok) {
+    const errMsg =
+      (typeof data?.error === 'string' ? data.error : data?.error?.message) ||
+      data?.message ||
+      raw.slice(0, 400);
+    throw new Error(`gateway 调用失败: ${resp.status} — ${errMsg}`);
+  }
+  const text = (
+    data?.choices?.[0]?.message?.content ??
+    data?.choices?.[0]?.text ??
+    ''
+  ).trim();
   if (!text) {
-    throw new Error('gateway 返回为空');
+    throw new Error(
+      `gateway 返回为空（请检查模型与网关是否匹配）。响应键：${Object.keys(data).join(', ')}`
+    );
   }
   return text;
 }
@@ -238,10 +274,12 @@ async function generateAISummary(period, payload) {
     const summary = await tryGenerateByGateway(payload.prompt);
     return { content: summary, usedAI: true, provider: 'gateway' };
   } catch (gatewayErr) {
+    console.warn(`[learning-journal] 周/月总结：网关失败 → ${gatewayErr.message}`);
     try {
       const summary = await tryGenerateByCli(payload.prompt);
       return { content: summary, usedAI: true, provider: 'cli' };
     } catch (cliErr) {
+      console.warn(`[learning-journal] 周/月总结：CLI 失败 → ${cliErr.message}`);
       const reason = `${gatewayErr.message}; ${cliErr.message}`;
       return {
         content: buildRuleBasedSummary(payload.periodTitle, payload.periodRangeText, payload.stats, reason),
@@ -309,6 +347,7 @@ ${generated.content}
     stats,
     usedAI: generated.usedAI,
     provider: generated.provider,
+    error: generated.error,
     content
   };
 }
@@ -425,6 +464,7 @@ module.exports = {
   extractJournalSignals,
   aggregatePeriodSignals,
   buildSummaryPrompt,
+  tryGenerateByGateway,
   generateAISummary,
   generatePeriodSummaryDraft,
   generateWeeklySummary,
