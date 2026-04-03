@@ -21,6 +21,7 @@ const {
   getSummaryDraft,
   clearSummaryDraft
 } = require('./state-store');
+const { toEmailPlainText } = require('./email-plain');
 
 // 从 OpenClaw 环境变量读取 QQ 邮箱配置
 const EMAIL_USER = process.env.EMAIL_USER;      // 你的 QQ 邮箱
@@ -39,14 +40,18 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-// 通用发送邮件函数
+// 通用发送邮件函数（正文去掉 Markdown 符号，更像日常手记；落盘文件仍为 .md）
 async function sendEmail(subject, content) {
   try {
+    const body =
+      process.env.LEARNING_JOURNAL_EMAIL_RAW === '1'
+        ? content
+        : toEmailPlainText(content);
     await transporter.sendMail({
       from: `"学习日志助手" <${EMAIL_USER}>`,
       to: TO_EMAIL,
       subject: subject,
-      text: content
+      text: body
     });
     console.log(`✅ 邮件发送成功：${subject}`);
   } catch (error) {
