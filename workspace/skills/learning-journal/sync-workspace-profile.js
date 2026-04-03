@@ -18,7 +18,6 @@ async function syncProfile() {
 
   for (const file of targetFiles) {
     const source = path.join(profileDir, file);
-    const target = path.join(workspaceRoot, file);
     const hasFile = await fs.pathExists(source);
 
     if (!hasFile) {
@@ -26,12 +25,13 @@ async function syncProfile() {
       continue;
     }
 
-    await fs.copy(source, target, { overwrite: true });
+    await fs.copy(source, path.join(workspaceRoot, file), { overwrite: true });
+    await fs.copy(source, path.join(skillRoot, file), { overwrite: true });
     copied.push(file);
   }
 
   if (copied.length > 0) {
-    console.log('Synced files:');
+    console.log('Synced profile → workspace root + skill root:');
     for (const file of copied) {
       console.log(`- ${file}`);
     }

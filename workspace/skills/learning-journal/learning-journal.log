@@ -1,6 +1,0 @@
-[dotenv@17.3.1] injecting env (5) from .env -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
-✅ 学习日志技能（QQ邮箱版）已启动！
-📧 配置的发送邮箱：2683647758@qq.com
-📂 日志保存路径：/Users/test/openclaw_test/workspace/memory/learning-journal
-✅ 邮件发送成功：📅 本月学习总结
-✅ 月总结已生成并发送：/Users/test/openclaw_test/workspace/memory/learning-journal/summaries/final/monthly-2026-03.md

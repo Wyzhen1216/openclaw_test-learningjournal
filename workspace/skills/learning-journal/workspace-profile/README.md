@@ -17,7 +17,7 @@
 npm run sync:profile
 ```
 
-脚本会将上述文件同步到 workspace 根目录，避免逐个手动修改。
+脚本会将上述文件同步到 **workspace 根目录** 与 **本技能根目录**（`skills/learning-journal/`），避免在多处手改同一份规范。
 
 ## Maintenance
 
