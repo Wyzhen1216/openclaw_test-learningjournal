@@ -4,13 +4,23 @@
   "description": "每日学习日志技能（QQ邮箱版）",
   "main": "learning-journal.js",
   "dependencies": {
+    "dotenv": "^16.4.5",
     "fs-extra": "^11.2.0",
     "moment": "^2.30.1",
     "node-cron": "^3.0.3",
     "nodemailer": "^6.9.13"
   },
+  "devDependencies": {
+    "pm2": "^5.4.3"
+  },
   "scripts": {
     "start": "node learning-journal.js",
-    "sync:profile": "node sync-workspace-profile.js"
+    "sync:profile": "node sync-workspace-profile.js",
+    "pm2:start": "pm2 start ecosystem.config.cjs",
+    "pm2:stop": "pm2 stop learning-journal",
+    "pm2:restart": "pm2 restart learning-journal",
+    "pm2:logs": "pm2 logs learning-journal",
+    "pm2:status": "pm2 status",
+    "pm2:delete": "pm2 delete learning-journal"
   }
 }

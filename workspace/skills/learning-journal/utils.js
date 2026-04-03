@@ -147,19 +147,21 @@ function buildSummaryPrompt(period, stats, periodRangeText) {
 
 async function tryGenerateByGateway(prompt) {
   const endpoint = process.env.OPENCLAW_SUMMARY_ENDPOINT || 'http://127.0.0.1:18789/v1/chat/completions';
-  const model = process.env.OPENCLAW_SUMMARY_MODEL;
-  if (!model) {
+  const backendModel = process.env.OPENCLAW_SUMMARY_MODEL;
+  if (!backendModel) {
     throw new Error('OPENCLAW_SUMMARY_MODEL 未配置');
   }
+  const agentModel = process.env.OPENCLAW_SUMMARY_GATEWAY_MODEL || 'openclaw/default';
   const headers = { 'Content-Type': 'application/json' };
   if (process.env.OPENCLAW_GATEWAY_TOKEN) {
     headers.Authorization = `Bearer ${process.env.OPENCLAW_GATEWAY_TOKEN}`;
   }
+  headers['x-openclaw-model'] = backendModel;
   const resp = await fetch(endpoint, {
     method: 'POST',
     headers,
     body: JSON.stringify({
-      model,
+      model: agentModel,
       messages: [
         { role: 'system', content: '你是学习日志总结助手。' },
         { role: 'user', content: prompt }
