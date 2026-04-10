@@ -65,3 +65,25 @@
 - 正式：`workspace/memory/learning-journal/summaries/final/`
   - 周总结：`weekly-YYYY-[W]WW.md`
   - 月总结：`monthly-YYYY-MM.md`
+
+## OpenClaw 调用约束（重要）
+
+为避免在聊天中卡住（常见为 edit/read 参数不完整），处理“学习日志更新”时请严格遵循：
+
+1. 优先调用本技能函数，不要直接走通用文件编辑工具：
+   - 创建草稿：`createLearningJournalDraft(content)`
+   - 编辑草稿：`editLearningJournalDraft(content)`
+   - 预览草稿：`previewLearningJournalDraft()`
+   - 确认保存：`confirmAndSaveLearningJournal()`
+   - 放弃草稿：`discardLearningJournalDraft()`
+
+2. 用户仅表达“新增/修改日志”时：
+   - 先调用 `createLearningJournalDraft(content)` 或 `editLearningJournalDraft(content)`，
+   - 然后明确询问“是否同意保存”，
+   - 用户同意后再调用 `confirmAndSaveLearningJournal()`。
+
+3. 禁止在本场景直接调用通用 `edit` 工具去改 markdown 文件，
+   除非用户明确要求“手工编辑某个指定文件路径”。
+
+4. 若工具失败，优先返回可执行的下一步（重试/确认内容），
+   不要在失败后进入无穷重试。
